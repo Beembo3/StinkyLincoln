@@ -1,0 +1,25 @@
+{
+  "name": "stinky-lincoln",
+  "version": "0.1.0",
+  "description": "A cozy pixel-art virtual pet game starring Lincoln, a very stinky good boy.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "preview": "vite preview"
+  },
+  "keywords": [
+    "game",
+    "pixel-art",
+    "tamagotchi",
+    "phaser"
+  ],
+  "license": "ISC",
+  "dependencies": {
+    "phaser": "^4.2.1"
+  },
+  "devDependencies": {
+    "typescript": "^7.0.2",
+    "vite": "^8.3.2"
+  }
+}
