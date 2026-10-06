@@ -78,6 +78,7 @@ export class RivalScene extends Phaser.Scene {
   private nextBrunoAt = 0;
   private lastThrowAt = 0;
   private spaceKey?: Phaser.Input.Keyboard.Key;
+  private mudButton?: Phaser.GameObjects.Container;
 
   constructor() {
     super('Rival');
@@ -152,7 +153,7 @@ export class RivalScene extends Phaser.Scene {
 
     this.resultLayer = this.add.container(0, 0).setDepth(20);
 
-    this.createButton(240, 706, 280, 76, '🟤 MUD!', 0x8a5a2b, () => this.throwMud());
+    this.mudButton = this.createButton(240, 706, 280, 76, '🟤 MUD!', 0x8a5a2b, () => this.throwMud());
 
     this.banner('Dirtiest wins!');
     audio.bark();
@@ -224,6 +225,9 @@ export class RivalScene extends Phaser.Scene {
 
   private finish(winner: Winner): void {
     this.stage = 'result';
+    // Remove the fight MUD button so it can't swallow taps meant for Done.
+    this.mudButton?.destroy(true);
+    this.mudButton = undefined;
     this.timerText.setText(winner === 'lincoln' ? '🏆 Lincoln!' : winner === 'bruno' ? '💀 Bruno!' : '🤝 Draw!');
 
     const state = getState();
@@ -421,7 +425,7 @@ export class RivalScene extends Phaser.Scene {
 
   private createButton(
     x: number, y: number, width: number, height: number, label: string, color: number, onClick: () => void,
-  ): void {
+  ): Phaser.GameObjects.Container {
     const container = this.add.container(x, y).setDepth(10);
     const g = this.add.graphics();
     g.fillStyle(0x000000, 0.25);
@@ -433,15 +437,35 @@ export class RivalScene extends Phaser.Scene {
       .setOrigin(0.5);
     container.add([g, text]);
     container.setSize(width, height);
+    const PAD = 8;
     container.setInteractive(
-      new Phaser.Geom.Rectangle(-width / 2, -height / 2, width, height),
+      new Phaser.Geom.Rectangle(-width / 2 - PAD, -height / 2 - PAD, width + PAD * 2, height + PAD * 2),
       Phaser.Geom.Rectangle.Contains,
     );
-    container.on('pointerdown', () => {
+    if (container.input) container.input.cursor = 'pointer';
+    let pressed = false;
+    let downX = 0;
+    let downY = 0;
+    container.on('pointerdown', (pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
+      event.stopPropagation();
+      pressed = true;
+      downX = pointer.x;
+      downY = pointer.y;
       container.setScale(0.95);
-      this.time.delayedCall(90, () => container.setScale(1));
+    });
+    container.on('pointerup', (pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
+      event.stopPropagation();
+      container.setScale(1);
+      if (!pressed) return;
+      pressed = false;
+      if (Math.hypot(pointer.x - downX, pointer.y - downY) > 24) return;
       onClick();
     });
+    container.on('pointerupoutside', () => {
+      pressed = false;
+      container.setScale(1);
+    });
     if (this.stage === 'result') this.resultLayer.add(container);
+    return container;
   }
 }

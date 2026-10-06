@@ -500,14 +500,36 @@ export class SleepScene extends Phaser.Scene {
       .setOrigin(0.5);
     container.add([g, text]);
     container.setSize(width, height);
+    const PAD = 8;
     container.setInteractive(
-      new Phaser.Geom.Rectangle(-width / 2, -height / 2, width, height),
+      new Phaser.Geom.Rectangle(-width / 2 - PAD, -height / 2 - PAD, width + PAD * 2, height + PAD * 2),
       Phaser.Geom.Rectangle.Contains,
     );
-    container.on('pointerdown', () => {
+    if (container.input) container.input.cursor = 'pointer';
+    let pressed = false;
+    let downX = 0;
+    let downY = 0;
+    container.on('pointerdown', (pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
+      event.stopPropagation();
+      pressed = true;
+      downX = pointer.x;
+      downY = pointer.y;
       container.setScale(0.95);
-      this.time.delayedCall(90, () => container.setScale(1));
+    });
+    container.on('pointerup', (pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
+      event.stopPropagation();
+      container.setScale(1);
+      if (!pressed) return;
+      pressed = false;
+      if (Math.hypot(pointer.x - downX, pointer.y - downY) > 24) return;
       onClick();
+    });
+    container.on('pointerupoutside', () => {
+      pressed = false;
+      container.setScale(1);
+    });
+    container.on('pointerout', () => {
+      if (!pressed) container.setScale(1);
     });
     this.stageLayer.add(container);
   }

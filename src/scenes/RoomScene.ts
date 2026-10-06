@@ -149,6 +149,7 @@ export class RoomScene extends Phaser.Scene {
 
   create(): void {
     this.state = getState();
+    this.input.topOnly = true;
     this.lastDay = this.state.day;
     this.saveAccumulator = 0;
     this.roomIndex = 0;
@@ -346,7 +347,20 @@ export class RoomScene extends Phaser.Scene {
     this.roomNavTap = this.add
       .zone(GAME_WIDTH / 2, 260, GAME_WIDTH - 20, 44)
       .setInteractive({ useHandCursor: true });
-    this.roomNavTap.on('pointerdown', () => this.goToRoom(this.roomIndex + 1, 1));
+    let navDownX = 0;
+    let navDownY = 0;
+    let navPressed = false;
+    this.roomNavTap.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      navPressed = true;
+      navDownX = pointer.x;
+      navDownY = pointer.y;
+    });
+    this.roomNavTap.on('pointerup', (pointer: Phaser.Input.Pointer) => {
+      if (!navPressed) return;
+      navPressed = false;
+      if (Math.hypot(pointer.x - navDownX, pointer.y - navDownY) > 24) return;
+      this.goToRoom(this.roomIndex + 1, 1);
+    });
   }
 
   private updateRoomNav(): void {
@@ -382,26 +396,48 @@ export class RoomScene extends Phaser.Scene {
 
   /** In-room tap targets: bowl/ball/tub/bed shortcuts per room. */
   private addRoomTappables(id: string): void {
+    // Keep every tappable above the bottom action bar (bar top ≈ 639)
+    // so a tap on a button can never leak into a room shortcut.
     const tap = (x: number, y: number, w: number, h: number, action: () => void): void => {
-      const zone = this.add.zone(x, y, w, h).setInteractive({ useHandCursor: true });
-      zone.on('pointerdown', (_pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
+      const clampedBottom = 630;
+      let hh = h;
+      let yy = y;
+      if (yy + hh / 2 > clampedBottom) {
+        hh = Math.max(20, clampedBottom - (yy - h / 2));
+        yy = yy - h / 2 + hh / 2;
+        if (hh <= 20) return;
+      }
+      const zone = this.add.zone(x, yy, w, hh).setInteractive({ useHandCursor: true });
+      let zDownX = 0;
+      let zDownY = 0;
+      let zPressed = false;
+      zone.on('pointerdown', (pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
         event.stopPropagation();
+        zPressed = true;
+        zDownX = pointer.x;
+        zDownY = pointer.y;
+      });
+      zone.on('pointerup', (pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
+        event.stopPropagation();
+        if (!zPressed) return;
+        zPressed = false;
+        if (Math.hypot(pointer.x - zDownX, pointer.y - zDownY) > 24) return;
         action();
       });
       this.roomArt.add(zone);
     };
 
     if (id === 'living') {
-      tap(96, 700, 110, 70, () => this.doAction('feed'));
-      tap(392, 706, 100, 80, () => this.doAction('play'));
+      // Bowl + ball visuals sit behind the action bar — their buttons already
+      // cover Feed/Play, so only the tub stays tappable here.
       tap(396, 508, 150, 110, () => this.tryBath());
     } else if (id === 'play') {
-      tap(240, 640, 220, 130, () => this.doAction('play'));
+      tap(240, 600, 220, 90, () => this.doAction('play'));
       tap(392, 560, 110, 90, () => this.doAction('play'));
     } else if (id === 'bedroom') {
-      tap(240, 600, 330, 150, () => this.doAction('sleep'));
+      tap(240, 585, 330, 120, () => this.doAction('sleep'));
     } else if (id === 'bathroom') {
-      tap(240, 620, 300, 170, () => this.tryBath());
+      tap(240, 580, 300, 130, () => this.tryBath());
     }
   }
 
@@ -607,6 +643,8 @@ export class RoomScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true });
     this.petZone.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
       if (this.hideAmount > 0.5) return;
+      // Presses that start on the bottom action bar belong to the buttons.
+      if (pointer.y > 630) return;
       this.downOnLincoln = true;
       this.grabPointerId = pointer.id;
       this.grabDownX = pointer.x;
@@ -918,7 +956,8 @@ export class RoomScene extends Phaser.Scene {
       .setOrigin(1, 0.5)
       .setDepth(10)
       .setInteractive({ useHandCursor: true });
-    this.muteText.on('pointerdown', () => {
+    this.muteText.on('pointerup', (_pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
+      event.stopPropagation();
       audio.toggleMuted();
       this.muteText.setText(audio.isMuted() ? '🔇' : '🔊');
     });
@@ -936,7 +975,10 @@ export class RoomScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true });
     this.resetBtn.on('pointerover', () => this.resetBtn.setColor('#fff3de'));
     this.resetBtn.on('pointerout', () => this.resetBtn.setColor('#d9c7a6'));
-    this.resetBtn.on('pointerdown', () => this.resetGame());
+    this.resetBtn.on('pointerup', (_pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
+      event.stopPropagation();
+      this.resetGame();
+    });
   }
 
   /** Show only this room's stat bars; stack them and shrink the panel to fit. */
@@ -1037,7 +1079,7 @@ export class RoomScene extends Phaser.Scene {
 
     const width = 104;
     const height = 62;
-    const gap = 8;
+    const gap = 10;
 
     const layoutRow = (defs: typeof row1, y: number): void => {
       const total = width * defs.length + gap * (defs.length - 1);
@@ -1049,13 +1091,13 @@ export class RoomScene extends Phaser.Scene {
           color: def.color,
           onClick: () => this.doAction(def.key),
         });
-        button.setDepth(10);
+        button.setDepth(20);
         if (def.key === 'calm') this.calmButton = button;
       });
     };
 
-    layoutRow(row1, 678);
-    layoutRow(row2, 748);
+    layoutRow(row1, 670);
+    layoutRow(row2, 744);
     this.calmButton?.setVisible(this.state.day >= CALM_UNLOCK_DAY);
   }
 

@@ -8,10 +8,10 @@ import { drawLincoln } from '../ui/lincoln';
 const PREVIEW_PIXEL = 3;
 const COLS = 3;
 const CELL_W = 144;
-const CELL_H = 150;
+const CELL_H = 136;
 const GAP = 8;
 const START_X = 16;
-const START_Y = 108;
+const START_Y = 100;
 
 /**
  * Lincoln's wardrobe. A grid of outfit previews; tap one to wear it. Overlays the
@@ -51,7 +51,7 @@ export class ClosetScene extends Phaser.Scene {
       this.createCell(cx, cy, outfit.id, outfit.name);
     });
 
-    this.createButton(240, 736, 200, 60, 'Done', 0x6ba84f, () => this.leave());
+    this.createButton(240, 742, 200, 60, 'Done', 0x6ba84f, () => this.leave());
     this.refreshSelection();
   }
 
@@ -119,14 +119,33 @@ export class ClosetScene extends Phaser.Scene {
       .setOrigin(0.5);
     container.add([g, text]);
     container.setSize(width, height);
+    const PAD = 8;
     container.setInteractive(
-      new Phaser.Geom.Rectangle(-width / 2, -height / 2, width, height),
+      new Phaser.Geom.Rectangle(-width / 2 - PAD, -height / 2 - PAD, width + PAD * 2, height + PAD * 2),
       Phaser.Geom.Rectangle.Contains,
     );
-    container.on('pointerdown', () => {
+    if (container.input) container.input.cursor = 'pointer';
+    let pressed = false;
+    let downX = 0;
+    let downY = 0;
+    container.on('pointerdown', (pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
+      event.stopPropagation();
+      pressed = true;
+      downX = pointer.x;
+      downY = pointer.y;
       container.setScale(0.95);
-      this.time.delayedCall(90, () => container.setScale(1));
+    });
+    container.on('pointerup', (pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
+      event.stopPropagation();
+      container.setScale(1);
+      if (!pressed) return;
+      pressed = false;
+      if (Math.hypot(pointer.x - downX, pointer.y - downY) > 24) return;
       onClick();
+    });
+    container.on('pointerupoutside', () => {
+      pressed = false;
+      container.setScale(1);
     });
   }
 }
