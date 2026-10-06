@@ -51,6 +51,7 @@ const ROOMS: RoomDef[] = [
   { id: 'play', name: 'Playground', icon: '🎾', hint: 'Tap the ball to play!' },
   { id: 'bedroom', name: 'Bedroom', icon: '🛏️', hint: 'Tap the bed to sleep 😴' },
   { id: 'bathroom', name: 'Bathroom', icon: '🛁', hint: 'Tap the tub for bath time!' },
+  { id: 'clinic', name: 'Clinic', icon: '🏥', hint: 'Tap the kit to patch him up! 🩹' },
 ];
 
 /** Which stat bars each room cares about — the HUD only shows those. */
@@ -59,6 +60,7 @@ const ROOM_STATS: Record<string, StatKey[]> = {
   play: ['fun', 'energy'],
   bedroom: ['energy'],
   bathroom: ['cleanliness'],
+  clinic: ['cleanliness', 'fun'],
 };
 
 /** What Lincoln wails when you grab him too hard. */
@@ -84,6 +86,8 @@ export class RoomScene extends Phaser.Scene {
   private moodSubText!: Phaser.GameObjects.Text;
   private hudPanel!: Phaser.GameObjects.Graphics;
   private resetBtn!: Phaser.GameObjects.Text;
+  private aidButton!: Phaser.GameObjects.Text;
+  private aidReadyAt = 0;
 
   // Swipeable rooms.
   private roomIndex = 0;
@@ -283,7 +287,8 @@ export class RoomScene extends Phaser.Scene {
     if (this.hiding) {
       this.hideUntil = this.time.now + 3500;
       // Wandered back outside mid-scare? Back inside with you.
-      if (ROOMS[this.roomIndex].id === 'play') this.goToRoom(0, -1, false);
+      const roomId = ROOMS[this.roomIndex].id;
+      if (roomId === 'play' || roomId === 'clinic') this.goToRoom(0, -1, false);
     } else {
       this.startHiding();
     }
@@ -294,7 +299,8 @@ export class RoomScene extends Phaser.Scene {
     this.hideUntil = this.time.now + 3500;
     // Caught outside in the playground? He bolts for the living room first —
     // the table he cowers under only exists in there.
-    if (ROOMS[this.roomIndex].id === 'play') {
+    const roomId = ROOMS[this.roomIndex].id;
+    if (roomId === 'play' || roomId === 'clinic') {
       this.goToRoom(0, -1, false);
       this.floatText('⛈️ Thunder! Lincoln runs inside!', '#9fc6e0');
     } else {
@@ -318,6 +324,7 @@ export class RoomScene extends Phaser.Scene {
     if (id === 'play') this.drawPlayground(g);
     else if (id === 'bedroom') this.drawBedroom(g);
     else if (id === 'bathroom') this.drawBathroom(g);
+    else if (id === 'clinic') this.drawClinic(g);
     else this.drawLiving(g);
 
     this.addRoomTappables(id);
@@ -449,6 +456,9 @@ export class RoomScene extends Phaser.Scene {
       tap(240, 585, 330, 120, () => this.doAction('sleep'));
     } else if (id === 'bathroom') {
       tap(240, 580, 300, 130, () => this.tryBath());
+    } else if (id === 'clinic') {
+      tap(240, 560, 220, 120, () => this.treatScar());
+      tap(392, 480, 110, 130, () => this.treatScar());
     }
   }
 
@@ -580,6 +590,64 @@ export class RoomScene extends Phaser.Scene {
     g.fillCircle(280, 548, 7);
     g.fillCircle(300, 556, 5);
     g.fillCircle(262, 558, 4);
+  }
+
+  private drawClinic(g: Phaser.GameObjects.Graphics): void {
+    // Mint wall + pale floor
+    g.fillStyle(0xdcf0ea, 1);
+    g.fillRect(0, 0, GAME_WIDTH, FLOOR_Y);
+    g.fillStyle(0xc8e2da, 0.6);
+    for (let x = 0; x < GAME_WIDTH; x += 48) g.fillRect(x, 0, 24, FLOOR_Y);
+    g.fillStyle(COLORS.brownDark, 1);
+    g.fillRect(0, FLOOR_Y - 14, GAME_WIDTH, 14);
+    g.fillStyle(0xb9cdc9, 1);
+    g.fillRect(0, FLOOR_Y, GAME_WIDTH, GAME_HEIGHT - FLOOR_Y);
+    // Rug
+    g.fillStyle(0x7fb8ad, 1);
+    g.fillEllipse(240, 660, 320, 110);
+    g.fillStyle(0x93c9bf, 1);
+    g.fillEllipse(240, 660, 230, 76);
+    // Heart poster on the left wall
+    g.fillStyle(0xffffff, 1);
+    g.fillRoundedRect(48, 380, 90, 110, 10);
+    g.lineStyle(3, 0x9dbfba, 1);
+    g.strokeRoundedRect(48, 380, 90, 110, 10);
+    g.fillStyle(0xe0627c, 1);
+    g.fillCircle(78, 428, 12);
+    g.fillCircle(102, 428, 12);
+    g.fillTriangle(66, 434, 114, 434, 90, 462);
+    // Wall cabinet with red cross (right)
+    g.fillStyle(0x000000, 0.1);
+    g.fillEllipse(392, 548, 110, 18);
+    g.fillStyle(0xffffff, 1);
+    g.fillRoundedRect(347, 420, 90, 120, 10);
+    g.lineStyle(3, 0x9dbfba, 1);
+    g.strokeRoundedRect(347, 420, 90, 120, 10);
+    g.lineStyle(2, 0x9dbfba, 1);
+    g.lineBetween(392, 420, 392, 540);
+    g.fillStyle(0xd9534f, 1);
+    g.fillRoundedRect(384, 438, 16, 40, 4);
+    g.fillRoundedRect(372, 450, 40, 16, 4);
+    // Exam table (center)
+    g.fillStyle(0x000000, 0.1);
+    g.fillEllipse(240, 612, 240, 24);
+    g.fillStyle(0x8fa3ad, 1);
+    g.fillRect(160, 566, 14, 40);
+    g.fillRect(306, 566, 14, 40);
+    g.fillStyle(0xcfd9dd, 1);
+    g.fillRoundedRect(140, 545, 200, 24, 8);
+    g.fillStyle(0xffffff, 1);
+    g.fillRoundedRect(150, 538, 180, 16, 8);
+    // Vet kit with red cross, sitting on the table
+    g.fillStyle(0xffffff, 1);
+    g.fillRoundedRect(195, 472, 90, 62, 10);
+    g.lineStyle(3, 0xd9534f, 1);
+    g.strokeRoundedRect(195, 472, 90, 62, 10);
+    g.fillStyle(0x8a5a2b, 1);
+    g.fillRoundedRect(222, 462, 36, 14, 6);
+    g.fillStyle(0xd9534f, 1);
+    g.fillRoundedRect(232, 484, 16, 38, 4);
+    g.fillRoundedRect(221, 495, 38, 16, 4);
   }
 
   private drawTable(g: Phaser.GameObjects.Graphics, x: number): void {
@@ -956,7 +1024,21 @@ export class RoomScene extends Phaser.Scene {
       })
       .setDepth(10);
 
-    // Mute + New game — 44px touch targets for phones.
+    // First aid + Mute + New game — 44px touch targets for phones.
+    this.aidButton = this.add
+      .text(GAME_WIDTH - 112, 217, '🩹', {
+        fontFamily: FONT,
+        fontSize: '22px',
+        color: '#d9c7a6',
+        padding: { x: 10, y: 10 },
+      })
+      .setOrigin(1, 0.5)
+      .setDepth(10)
+      .setInteractive({ useHandCursor: true });
+    this.aidButton.on('pointerup', (_pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
+      event.stopPropagation();
+      this.treatScar();
+    });
     this.muteText = this.add
       .text(GAME_WIDTH - 62, 217, audio.isMuted() ? '🔇' : '🔊', {
         fontFamily: FONT,
@@ -1009,6 +1091,7 @@ export class RoomScene extends Phaser.Scene {
 
     this.moodText.setY(y + 4);
     this.moodSubText.setY(y + 22);
+    this.aidButton.setY(y + 13);
     this.muteText.setY(y + 13);
     this.resetBtn.setY(y + 13);
 
@@ -1070,6 +1153,10 @@ export class RoomScene extends Phaser.Scene {
       this.weatherText.setText(weatherStr);
     }
     this.calmButton?.setVisible(day >= CALM_UNLOCK_DAY);
+    // Bandage badge mirrors the scratch count; dimmed when there's nothing to heal.
+    const aidStr = this.scars.length > 0 ? `🩹${this.scars.length}` : '🩹';
+    if (this.aidButton && this.aidButton.text !== aidStr) this.aidButton.setText(aidStr);
+    if (this.aidButton) this.aidButton.setAlpha(this.scars.length > 0 ? 1 : 0.45);
   }
 
   // ── Actions ─────────────────────────────────────────────────────────────
@@ -1294,6 +1381,29 @@ export class RoomScene extends Phaser.Scene {
         g.lineBetween(s.x - dx + ox, s.y - dy + oy, s.x + dx + ox, s.y + dy + oy);
       }
     }
+  }
+
+  /** Patch up one scratch with a bandage: heals oldest first, +bond. */
+  private treatScar(): void {
+    if (this.time.now < this.aidReadyAt) {
+      this.floatText('🩹 One at a time…', '#d9c7a6');
+      return;
+    }
+    if (this.scars.length === 0) {
+      this.floatText("No owies — he's all good! 💛", '#9bd35a');
+      return;
+    }
+    this.aidReadyAt = this.time.now + 2500;
+    this.scars.shift();
+    this.redrawScars();
+
+    this.state.lincoln.bond = Phaser.Math.Clamp(this.state.lincoln.bond + 1, 0, 100);
+    audio.happy();
+    this.floatText('🩹 Patched up!', '#9bd35a');
+    this.spawnHearts();
+    this.hopLincoln();
+    this.refreshHud();
+    saveNow();
   }
 
   /** Fades scars out over a minute without redrawing the sprite every frame. */
