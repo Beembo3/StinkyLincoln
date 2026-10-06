@@ -650,13 +650,17 @@ export class BathScene extends Phaser.Scene {
     onClick: () => void,
   ): void {
     const container = this.add.container(x, y);
-    const g = this.add.graphics();
-    g.fillStyle(0x000000, 0.22);
-    g.fillRoundedRect(-width / 2, -height / 2 + 5, width, height, 14);
-    g.fillStyle(color, 1);
-    g.fillRoundedRect(-width / 2, -height / 2, width, height, 14);
-    g.lineStyle(3, COLORS.cream, 0.25);
-    g.strokeRoundedRect(-width / 2 + 2, -height / 2 + 2, width - 4, height - 4, 12);
+    const shadow = this.add.graphics();
+    shadow.fillStyle(0x000000, 0.22);
+    shadow.fillRoundedRect(-width / 2, -height / 2 + 5, width, height, 14);
+    // Rectangle = reliable full-area hit test (see ActionButton).
+    const bg = this.add.rectangle(0, 0, width, height, color);
+    bg.setInteractive({ useHandCursor: true });
+    const face = this.add.graphics();
+    face.fillStyle(color, 1);
+    face.fillRoundedRect(-width / 2, -height / 2, width, height, 14);
+    face.lineStyle(3, COLORS.cream, 0.25);
+    face.strokeRoundedRect(-width / 2 + 2, -height / 2 + 2, width - 4, height - 4, 12);
 
     const text = this.add
       .text(0, 0, label, {
@@ -667,38 +671,24 @@ export class BathScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    container.add([g, text]);
+    container.add([shadow, bg, face, text]);
     container.setSize(width, height);
-    const PAD = 8;
-    container.setInteractive(
-      new Phaser.Geom.Rectangle(-width / 2 - PAD, -height / 2 - PAD, width + PAD * 2, height + PAD * 2),
-      Phaser.Geom.Rectangle.Contains,
-    );
-    if (container.input) container.input.cursor = 'pointer';
-    let pressed = false;
-    let downX = 0;
-    let downY = 0;
-    container.on('pointerdown', (pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
+    let downFired = false;
+    bg.on('pointerdown', (_pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
       event.stopPropagation();
-      pressed = true;
-      downX = pointer.x;
-      downY = pointer.y;
+      downFired = true;
       container.setScale(0.95);
-    });
-    container.on('pointerup', (pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
-      event.stopPropagation();
-      container.setScale(1);
-      if (!pressed) return;
-      pressed = false;
-      if (Math.hypot(pointer.x - downX, pointer.y - downY) > 24) return;
       onClick();
     });
-    container.on('pointerupoutside', () => {
-      pressed = false;
+    bg.on('pointerup', (_pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
+      event.stopPropagation();
       container.setScale(1);
+      if (!downFired) onClick();
+      downFired = false;
     });
-    container.on('pointerout', () => {
-      if (!pressed) container.setScale(1);
+    bg.on('pointerupoutside', () => {
+      downFired = false;
+      container.setScale(1);
     });
     this.stageLayer.add(container);
   }

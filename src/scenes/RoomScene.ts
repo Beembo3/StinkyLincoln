@@ -1077,9 +1077,9 @@ export class RoomScene extends Phaser.Scene {
       { key: 'calm', label: 'Calm', color: 0x4aa39a },
     ];
 
-    const width = 104;
-    const height = 62;
-    const gap = 10;
+    const width = 108;
+    const height = 68;
+    const gap = 8;
 
     const layoutRow = (defs: typeof row1, y: number): void => {
       const total = width * defs.length + gap * (defs.length - 1);
@@ -1096,8 +1096,8 @@ export class RoomScene extends Phaser.Scene {
       });
     };
 
-    layoutRow(row1, 670);
-    layoutRow(row2, 744);
+    layoutRow(row1, 666);
+    layoutRow(row2, 742);
     this.calmButton?.setVisible(this.state.day >= CALM_UNLOCK_DAY);
   }
 

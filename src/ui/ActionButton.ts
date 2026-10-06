@@ -10,9 +10,7 @@ export interface ActionButtonConfig {
 
 /** A chunky rounded action button with an icon and label. */
 export class ActionButton extends Phaser.GameObjects.Container {
-  private pressed = false;
-  private downX = 0;
-  private downY = 0;
+  private downFired = false;
 
   constructor(
     scene: Phaser.Scene,
@@ -24,78 +22,68 @@ export class ActionButton extends Phaser.GameObjects.Container {
   ) {
     super(scene, x, y);
 
-    const g = scene.add.graphics();
-    // Drop shadow
-    g.fillStyle(0x000000, 0.22);
-    g.fillRoundedRect(-width / 2, -height / 2 + 5, width, height, 14);
-    // Body
-    g.fillStyle(config.color, 1);
-    g.fillRoundedRect(-width / 2, -height / 2, width, height, 14);
-    // Highlight rim
-    g.lineStyle(3, COLORS.cream, 0.25);
-    g.strokeRoundedRect(-width / 2 + 2, -height / 2 + 2, width - 4, height - 4, 12);
+    // Shadow (visual only).
+    const shadow = scene.add.graphics();
+    shadow.fillStyle(0x000000, 0.22);
+    shadow.fillRoundedRect(-width / 2, -height / 2 + 5, width, height, 14);
 
-    const icon = scene.add.text(0, -12, config.icon, { fontSize: '28px' }).setOrigin(0.5);
+    // The REAL hit target: a Rectangle GameObject. Rectangles have a solid
+    // origin-0.5 hit test, unlike Containers with custom Geom hit areas
+    // which are easy to offset and leave dead spots.
+    const bg = scene.add.rectangle(0, 0, width, height, config.color);
+    bg.setInteractive({ useHandCursor: true });
+
+    // Rounded overlay so it still looks chunky (drawn over the rect).
+    const face = scene.add.graphics();
+    face.fillStyle(config.color, 1);
+    face.fillRoundedRect(-width / 2, -height / 2, width, height, 14);
+    face.lineStyle(3, COLORS.cream, 0.25);
+    face.strokeRoundedRect(-width / 2 + 2, -height / 2 + 2, width - 4, height - 4, 12);
+
+    const icon = scene.add.text(0, -12, config.icon, { fontSize: '30px' }).setOrigin(0.5);
     const label = scene.add
       .text(0, 20, config.label, {
         fontFamily: FONT,
-        fontSize: '15px',
+        fontSize: '16px',
         color: '#fff8ec',
         fontStyle: 'bold',
       })
       .setOrigin(0.5);
 
-    this.add([g, icon, label]);
+    this.add([shadow, bg, face, icon, label]);
     this.setSize(width, height);
-    // Slightly generous touch target so the whole visual is tappable,
-    // without bleeding into the neighbour (neighbours sit 10px away).
-    const PAD_X = 4;
-    const PAD_Y = 6;
-    this.setInteractive(
-      new Phaser.Geom.Rectangle(
-        -width / 2 - PAD_X,
-        -height / 2 - PAD_Y,
-        width + PAD_X * 2,
-        height + PAD_Y * 2,
-      ),
-      Phaser.Geom.Rectangle.Contains,
-    );
-    if (this.input) this.input.cursor = 'pointer';
 
-    this.on('pointerover', (pointer: Phaser.Input.Pointer) => {
-      if (!pointer.wasTouch && !this.pressed) this.setScale(1.04);
+    bg.on('pointerover', (pointer: Phaser.Input.Pointer) => {
+      if (!pointer.wasTouch) this.setScale(1.04);
     });
-    this.on('pointerout', () => {
-      if (!this.pressed) this.setScale(1);
+    bg.on('pointerout', () => {
+      this.setScale(1);
     });
-    // Press visual on down, activate on up (a real tap). This stops swipes
-    // that start on a button from firing it, and stops one press from
-    // leaking into the room tappables underneath.
-    this.on(
+    // Fire on DOWN — maximally forgiving on touch (no slip-to-cancel).
+    // Swipes starting here are already ignored by the scene's swipe guard
+    // (swipeStartY > 620), and room tappables only fire on tap-up.
+    bg.on(
       'pointerdown',
       (pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
         event.stopPropagation();
-        this.pressed = true;
-        this.downX = pointer.x;
-        this.downY = pointer.y;
+        this.downFired = true;
         this.setScale(0.92);
-      },
-    );
-    this.on(
-      'pointerup',
-      (pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
-        event.stopPropagation();
-        const wasPressed = this.pressed;
-        this.pressed = false;
-        this.setScale(1);
-        if (!wasPressed) return;
-        // Finger/tree slip tolerance — a drag is not a tap.
-        if (Math.hypot(pointer.x - this.downX, pointer.y - this.downY) > 24) return;
         config.onClick();
+        void pointer;
       },
     );
-    this.on('pointerupoutside', () => {
-      this.pressed = false;
+    // Backup for mouse users who press elsewhere and release here.
+    bg.on(
+      'pointerup',
+      (_pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
+        event.stopPropagation();
+        this.setScale(1);
+        if (!this.downFired) config.onClick();
+        this.downFired = false;
+      },
+    );
+    bg.on('pointerupoutside', () => {
+      this.downFired = false;
       this.setScale(1);
     });
 

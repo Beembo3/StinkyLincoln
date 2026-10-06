@@ -94,52 +94,45 @@ export class ShopScene extends Phaser.Scene {
   }
 
   private makeBuyButton(cx: number, cy: number, id: string, cost: number, disabled: boolean): void {
-    const w = 128;
-    const h = 48;
+    const w = 136;
+    const h = 56;
     const color = disabled ? 0xb9ac97 : 0xc98a2b;
     const container = this.add.container(cx, cy);
-    const g = this.add.graphics();
-    g.fillStyle(color, 1);
-    g.fillRoundedRect(-w / 2, -h / 2, w, h, 12);
+    const bg = this.add.rectangle(0, 0, w, h, color);
+    bg.setInteractive({ useHandCursor: true });
+    const face = this.add.graphics();
+    face.fillStyle(color, 1);
+    face.fillRoundedRect(-w / 2, -h / 2, w, h, 12);
     const text = this.add
       .text(0, 0, `🪙 ${cost}`, {
-        fontFamily: FONT, fontSize: '18px', color: '#ffffff', fontStyle: 'bold',
+        fontFamily: FONT, fontSize: '19px', color: '#ffffff', fontStyle: 'bold',
       })
       .setOrigin(0.5);
-    container.add([g, text]);
+    container.add([bg, face, text]);
     container.setSize(w, h);
-    const PAD = 10;
-    container.setInteractive(
-      new Phaser.Geom.Rectangle(-w / 2 - PAD, -h / 2 - PAD, w + PAD * 2, h + PAD * 2),
-      Phaser.Geom.Rectangle.Contains,
-    );
-    if (container.input) container.input.cursor = 'pointer';
-    let pressed = false;
-    let downX = 0;
-    let downY = 0;
-    container.on('pointerdown', (pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
-      event.stopPropagation();
-      pressed = true;
-      downX = pointer.x;
-      downY = pointer.y;
-      container.setScale(0.95);
-    });
-    container.on('pointerup', (pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
-      event.stopPropagation();
-      container.setScale(1);
-      if (!pressed) return;
-      pressed = false;
-      if (Math.hypot(pointer.x - downX, pointer.y - downY) > 24) return;
+    let downFired = false;
+    const activate = (): void => {
       if (disabled) {
-        // Explain why instead of dead silence on phones.
         audio.click();
         this.tweens.add({ targets: this.coinsText, scale: { from: 1.35, to: 1 }, duration: 220, ease: 'Quad.out' });
         return;
       }
       this.buy(id, cost);
+    };
+    bg.on('pointerdown', (_pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
+      event.stopPropagation();
+      downFired = true;
+      container.setScale(0.95);
+      activate();
     });
-    container.on('pointerupoutside', () => {
-      pressed = false;
+    bg.on('pointerup', (_pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
+      event.stopPropagation();
+      container.setScale(1);
+      if (!downFired) activate();
+      downFired = false;
+    });
+    bg.on('pointerupoutside', () => {
+      downFired = false;
       container.setScale(1);
     });
     this.rowsLayer.add(container);
@@ -165,42 +158,34 @@ export class ShopScene extends Phaser.Scene {
     x: number, y: number, width: number, height: number, label: string, color: number, onClick: () => void,
   ): void {
     const container = this.add.container(x, y).setDepth(10);
-    const g = this.add.graphics();
-    g.fillStyle(0x000000, 0.22);
-    g.fillRoundedRect(-width / 2, -height / 2 + 5, width, height, 14);
-    g.fillStyle(color, 1);
-    g.fillRoundedRect(-width / 2, -height / 2, width, height, 14);
+    const shadow = this.add.graphics();
+    shadow.fillStyle(0x000000, 0.22);
+    shadow.fillRoundedRect(-width / 2, -height / 2 + 5, width, height, 14);
+    const bg = this.add.rectangle(0, 0, width, height, color);
+    bg.setInteractive({ useHandCursor: true });
+    const face = this.add.graphics();
+    face.fillStyle(color, 1);
+    face.fillRoundedRect(-width / 2, -height / 2, width, height, 14);
     const text = this.add
       .text(0, 0, label, { fontFamily: FONT, fontSize: '22px', color: '#ffffff', fontStyle: 'bold' })
       .setOrigin(0.5);
-    container.add([g, text]);
+    container.add([shadow, bg, face, text]);
     container.setSize(width, height);
-    const PAD = 8;
-    container.setInteractive(
-      new Phaser.Geom.Rectangle(-width / 2 - PAD, -height / 2 - PAD, width + PAD * 2, height + PAD * 2),
-      Phaser.Geom.Rectangle.Contains,
-    );
-    if (container.input) container.input.cursor = 'pointer';
-    let pressed = false;
-    let downX = 0;
-    let downY = 0;
-    container.on('pointerdown', (pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
+    let downFired = false;
+    bg.on('pointerdown', (_pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
       event.stopPropagation();
-      pressed = true;
-      downX = pointer.x;
-      downY = pointer.y;
+      downFired = true;
       container.setScale(0.95);
-    });
-    container.on('pointerup', (pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
-      event.stopPropagation();
-      container.setScale(1);
-      if (!pressed) return;
-      pressed = false;
-      if (Math.hypot(pointer.x - downX, pointer.y - downY) > 24) return;
       onClick();
     });
-    container.on('pointerupoutside', () => {
-      pressed = false;
+    bg.on('pointerup', (_pointer: Phaser.Input.Pointer, _x: number, _y: number, event: Phaser.Types.Input.EventData) => {
+      event.stopPropagation();
+      container.setScale(1);
+      if (!downFired) onClick();
+      downFired = false;
+    });
+    bg.on('pointerupoutside', () => {
+      downFired = false;
       container.setScale(1);
     });
   }
