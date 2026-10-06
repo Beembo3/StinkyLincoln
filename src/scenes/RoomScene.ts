@@ -110,6 +110,7 @@ export class RoomScene extends Phaser.Scene {
   private grabX = 0;
   private grabY = 0;
   private speechBox?: Phaser.GameObjects.Container;
+  private speechBorn = 0;
   private stink!: Phaser.GameObjects.Graphics;
   private messOverlay!: Phaser.GameObjects.Graphics;
   private waterOverlay!: Phaser.GameObjects.Graphics;
@@ -250,6 +251,16 @@ export class RoomScene extends Phaser.Scene {
 
     const topY = this.lincolnContainer.y - LINCOLN_H * scaleY * shrink;
     this.moodBubble.setPosition(this.lincolnContainer.x + 56, topY + 24);
+
+    // Keep grab-complaint bubbles glued above him so they travel back with
+    // him instead of lingering where he was dropped.
+    if (this.speechBox) {
+      const age = this.time.now - this.speechBorn;
+      const lift = age <= 900 ? 0 : Math.min(26, ((age - 900) / 500) * 26);
+      const scx = Phaser.Math.Clamp(this.lincolnContainer.x, 140, GAME_WIDTH - 140);
+      const scy = this.lincolnContainer.y - LINCOLN_H * scaleY * shrink - 66 - lift;
+      this.speechBox.setPosition(scx, scy);
+    }
   }
 
   // ── Thunderstorms ───────────────────────────────────────────────────────
@@ -1325,7 +1336,11 @@ export class RoomScene extends Phaser.Scene {
 
   /** Lincoln's own speech bubble — his side of the story. */
   private showSpeech(text: string): void {
-    this.speechBox?.destroy();
+    if (this.speechBox) {
+      this.tweens.killTweensOf(this.speechBox);
+      this.speechBox.destroy();
+      this.speechBox = undefined;
+    }
     const cx = Phaser.Math.Clamp(this.lincolnContainer.x, 140, GAME_WIDTH - 140);
     const cy = this.lincolnContainer.y - LINCOLN_H * this.lincolnScaleY - 66;
     const box = this.add.container(cx, cy).setDepth(66);
@@ -1347,9 +1362,10 @@ export class RoomScene extends Phaser.Scene {
       .setOrigin(0.5);
     box.add([g, label]);
     this.speechBox = box;
+    this.speechBorn = this.time.now;
+    // Position follows him every frame (see animateLincoln) — only fade out.
     this.tweens.add({
       targets: box,
-      y: cy - 26,
       alpha: 0,
       delay: 900,
       duration: 500,
