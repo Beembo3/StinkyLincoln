@@ -1152,7 +1152,8 @@ export class RoomScene extends Phaser.Scene {
       this.lastWeatherStr = weatherStr;
       this.weatherText.setText(weatherStr);
     }
-    this.calmButton?.setVisible(day >= CALM_UNLOCK_DAY);
+    this.calmButton?.setVisible(true);
+    this.calmButton?.setAlpha(day >= CALM_UNLOCK_DAY ? 1 : 0.55);
     // Bandage badge mirrors the scratch count; dimmed when there's nothing to heal.
     const aidStr = this.scars.length > 0 ? `🩹${this.scars.length}` : '🩹';
     if (this.aidButton && this.aidButton.text !== aidStr) this.aidButton.setText(aidStr);
@@ -1200,7 +1201,9 @@ export class RoomScene extends Phaser.Scene {
 
     layoutRow(row1, 666, width, gap);
     layoutRow(row2, 742, width2, gap2);
-    this.calmButton?.setVisible(this.state.day >= CALM_UNLOCK_DAY);
+    // Calm keeps its slot (dimmed) before Day 10 so both rows stay even.
+    this.calmButton?.setVisible(true);
+    this.calmButton?.setAlpha(this.state.day >= CALM_UNLOCK_DAY ? 1 : 0.55);
   }
 
   private doAction(key: ActionKey): void {
@@ -1319,7 +1322,10 @@ export class RoomScene extends Phaser.Scene {
 
   /** The "Calm Down" mechanic, mastered on Day 10. */
   private doCalm(): void {
-    if (this.state.day < CALM_UNLOCK_DAY) return;
+    if (this.state.day < CALM_UNLOCK_DAY) {
+      this.floatText(`🧘 Calm unlocks on Day ${CALM_UNLOCK_DAY}!`, '#d9c7a6');
+      return;
+    }
     if (this.time.now < this.calmReadyAt) {
       this.floatText('🧘 Give him a moment…', '#d9c7a6');
       return;
