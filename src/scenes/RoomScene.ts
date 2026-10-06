@@ -1172,18 +1172,22 @@ export class RoomScene extends Phaser.Scene {
       { key: 'closet', label: 'Closet', color: 0x8e5fb0 },
       { key: 'shop', label: 'Shop', color: 0xc98a2b },
       { key: 'rival', label: 'Rival', color: 0xb56a5a },
+      { key: 'aid', label: 'Aid', color: 0xd9534f },
       { key: 'calm', label: 'Calm', color: 0x4aa39a },
     ];
 
     const width = 108;
     const height = 68;
     const gap = 8;
+    // Row 2 holds five buttons, so they run slightly narrower to fit.
+    const width2 = 86;
+    const gap2 = 6;
 
-    const layoutRow = (defs: typeof row1, y: number): void => {
-      const total = width * defs.length + gap * (defs.length - 1);
-      const startX = (GAME_WIDTH - total) / 2 + width / 2;
+    const layoutRow = (defs: typeof row1, y: number, w: number, gp: number): void => {
+      const total = w * defs.length + gp * (defs.length - 1);
+      const startX = (GAME_WIDTH - total) / 2 + w / 2;
       defs.forEach((def, index) => {
-        const button = new ActionButton(this, startX + index * (width + gap), y, width, height, {
+        const button = new ActionButton(this, startX + index * (w + gp), y, w, height, {
           icon: ACTIONS[def.key].icon,
           label: def.label,
           color: def.color,
@@ -1194,8 +1198,8 @@ export class RoomScene extends Phaser.Scene {
       });
     };
 
-    layoutRow(row1, 666);
-    layoutRow(row2, 742);
+    layoutRow(row1, 666, width, gap);
+    layoutRow(row2, 742, width2, gap2);
     this.calmButton?.setVisible(this.state.day >= CALM_UNLOCK_DAY);
   }
 
@@ -1239,6 +1243,11 @@ export class RoomScene extends Phaser.Scene {
 
     if (key === 'calm') {
       this.doCalm();
+      return;
+    }
+
+    if (key === 'aid') {
+      this.treatScar();
       return;
     }
 

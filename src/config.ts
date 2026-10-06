@@ -97,6 +97,7 @@ export const ACTIONS: Record<ActionKey, ActionEffect> = {
   shop: { icon: '🛒', toast: 'Welcome!' },
   calm: { icon: '🧘', toast: 'Breathe...' },
   rival: { icon: '🐾', toast: 'Smell-off!' },
+  aid: { icon: '🩹', toast: 'Patched up!' },
 };
 
 /** Lincoln's face bubble, one emoji per mood. */

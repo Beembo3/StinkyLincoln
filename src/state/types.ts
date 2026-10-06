@@ -48,4 +48,4 @@ export interface GameState {
 }
 
 export type StatKey = 'hunger' | 'thirst' | 'fun' | 'energy' | 'cleanliness' | 'fatness';
-export type ActionKey = 'feed' | 'play' | 'sleep' | 'pet' | 'bath' | 'closet' | 'shop' | 'calm' | 'rival';
+export type ActionKey = 'feed' | 'play' | 'sleep' | 'pet' | 'bath' | 'closet' | 'shop' | 'calm' | 'rival' | 'aid';
