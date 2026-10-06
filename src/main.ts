@@ -9,6 +9,10 @@ import { ClosetScene } from './scenes/ClosetScene';
 import { ShopScene } from './scenes/ShopScene';
 import { EndingScene } from './scenes/EndingScene';
 import { RivalScene } from './scenes/RivalScene';
+import { PlayScene } from './scenes/PlayScene';
+import { TreatScene } from './scenes/TreatScene';
+import { FenceScene } from './scenes/FenceScene';
+import { PuddleScene } from './scenes/PuddleScene';
 
 const config: Phaser.Types.Core.GameConfig = {
   type: Phaser.AUTO,
@@ -24,7 +28,7 @@ const config: Phaser.Types.Core.GameConfig = {
     autoCenter: Phaser.Scale.CENTER_BOTH,
     autoRound: true,
   },
-  scene: [BootScene, RoomScene, BathScene, SleepScene, ClosetScene, ShopScene, EndingScene, RivalScene],
+  scene: [BootScene, RoomScene, BathScene, SleepScene, ClosetScene, ShopScene, EndingScene, RivalScene, PlayScene, TreatScene, FenceScene, PuddleScene],
 };
 
 const game = new Phaser.Game(config);

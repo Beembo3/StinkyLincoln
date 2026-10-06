@@ -1212,8 +1212,8 @@ export class RoomScene extends Phaser.Scene {
       return;
     }
 
-    if (key === 'sleep' || key === 'closet') {
-      const sceneKey = key === 'sleep' ? 'Sleep' : 'Closet';
+    if (key === 'sleep' || key === 'closet' || key === 'play') {
+      const sceneKey = key === 'sleep' ? 'Sleep' : key === 'closet' ? 'Closet' : 'Play';
       if (this.scene.isActive(sceneKey)) return;
       audio.click();
       saveNow();
@@ -1265,13 +1265,6 @@ export class RoomScene extends Phaser.Scene {
         l.bond = Phaser.Math.Clamp(l.bond + 1, 0, 100);
       }
       addCoins(this.state, 1);
-    } else if (key === 'play') {
-      if (hasItem(this.state, 'jokes')) {
-        l.fun = Phaser.Math.Clamp(l.fun + 8, 0, 100);
-        l.bond = Phaser.Math.Clamp(l.bond + 2, 0, 100);
-        audio.happy();
-      }
-      addCoins(this.state, 2);
     } else if (key === 'pet') {
       addCoins(this.state, 1);
       // Searching for the hidden shampoo.
