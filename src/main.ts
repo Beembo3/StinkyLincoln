@@ -33,6 +33,15 @@ const config: Phaser.Types.Core.GameConfig = {
 
 const game = new Phaser.Game(config);
 
+// Register the service worker so the game is installable + works offline.
+if ('serviceWorker' in navigator && import.meta.env.PROD) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').catch(() => {
+      /* offline support is best-effort */
+    });
+  });
+}
+
 // Exposed for debugging and automated smoke tests.
 (window as unknown as { __game: Phaser.Game; __audio: typeof audio }).__game = game;
 (window as unknown as { __game: Phaser.Game; __audio: typeof audio }).__audio = audio;

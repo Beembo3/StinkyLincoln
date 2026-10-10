@@ -4,7 +4,7 @@ import { FONT, GAME_HEIGHT, GAME_WIDTH } from '../config';
 import { createLogo } from '../ui/logo';
 
 /** Flip to true after dropping the real artwork at `public/logo.png`. */
-const USE_LOGO_IMAGE = false;
+const USE_LOGO_IMAGE = true;
 
 /** Splash / loading screen. Tapping here unlocks audio and starts the game. */
 export class BootScene extends Phaser.Scene {
@@ -22,20 +22,17 @@ export class BootScene extends Phaser.Scene {
   create(): void {
     this.started = false;
 
-    // Warm backdrop
+    // Warm backdrop — pure black so the real logo PNG (black bg) blends seamlessly.
     const bg = this.add.graphics();
-    bg.fillStyle(0x241708, 1);
+    bg.fillStyle(0x000000, 1);
     bg.fillRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
-    bg.fillStyle(0x3a2416, 1);
-    bg.fillCircle(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 40, 320);
-    bg.fillStyle(0x2c1b0e, 1);
-    bg.fillCircle(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 40, 300);
 
     // Logo (real image if available, otherwise the drawn one)
     let logo: Phaser.GameObjects.GameObject;
     if (USE_LOGO_IMAGE && this.textures.exists('logo')) {
       const img = this.add.image(GAME_WIDTH / 2, GAME_HEIGHT / 2 - 70, 'logo');
       img.setScale(Math.min(1, 440 / img.width));
+      img.texture.setFilter(Phaser.Textures.FilterMode.NEAREST);
       logo = img;
     } else {
       logo = createLogo(this, GAME_WIDTH / 2, GAME_HEIGHT / 2 - 70, 1);
